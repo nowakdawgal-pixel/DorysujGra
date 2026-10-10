@@ -1,8 +1,10 @@
-# Dorysuj!
+# Dorysuj! 2.0 — prototyp rozszerzony
 
-Wczesny prototyp gry Android. Zawiera cztery kategorie, po trzy proste sceny w każdej, rysowanie palcem, monety, podpowiedzi i automatyczne budowanie APK przez GitHub Actions.
+- Cztery kategorie, zapis postępu i monet
+- Profil gracza (prosty wybór awatara i imię)
+- Muzyka w tle oraz osobny przełącznik dźwięków
+- Większe numery poziomów, nagrody za każdy poziom i bonus co 10 poziomów
+- Usunięty przycisk „Wyczyść”
+- Próba rysowania musi mieć minimalną długość; samo dotknięcie nie zalicza poziomu
 
-## Budowanie
-W repozytorium GitHub otwórz **Add file → Upload files**, wgraj zawartość tego projektu, zatwierdź zmiany, a następnie otwórz zakładkę **Actions**. Po zakończeniu zadania pobierz artefakt `DorysujGra-debug-apk`.
-
-To wersja prototypowa: rozpoznawanie rysunku jest uproszczone i wymaga testów na telefonie.
+**Ważne:** to nadal prototyp. Zawiera 130 numerowanych etapów na kategorię, ale na tym etapie wykorzystuje zestaw bazowych scen powtarzanych w kolejnych poziomach. Żeby uzyskać prawdziwe 520 unikalnych zagadek, trzeba przygotować i przetestować osobne ilustracje oraz precyzyjne reguły rozwiązania dla każdego poziomu. Ustawienie imienia w tej wersji jest uproszczone; ekran pozwala przełączać profil, a pełne pole edycji tekstowej można dopracować w kolejnej iteracji.
