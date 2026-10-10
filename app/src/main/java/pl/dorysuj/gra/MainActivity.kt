@@ -73,6 +73,7 @@ private class GameView(context: Context) : View(context) {
     private var startY = 0f
     private var lastX = 0f
     private var lastY = 0f
+    private var strokeLength = 0f
     private var toast = ""
     private var toastUntil = 0L
     private var solvedThisRound = false
@@ -150,10 +151,10 @@ private class GameView(context: Context) : View(context) {
         val z=currentPuzzle()
         txt(c,"‹ MENU",w*.06f,h*.052f,w*.038f,Color.WHITE,true)
         txt(c,"POZIOM ${level+1}",w*.5f,h*.060f,w*.060f,Color.WHITE,true,true)
-        txt(c,"🪙 $coins",w*.94f,h*.055f,w*.036f,0xffffd45c.toInt(),true)
+        txt(c,"🪙 $coins",w*.89f,h*.055f,w*.032f,0xffffd45c.toInt(),true,true)
         box(c,w*.05f,h*.10f,w*.95f,h*.82f,0xfff8f9ff.toInt(),28f)
         txt(c,z.title,w*.5f,h*.16f,w*.065f,0xff232e4c.toInt(),true,true)
-        scene(c,z.kind,w*.5f,h*.47f,w*.68f)
+        scene(c,cat,z.kind,w*.5f,h*.47f,w*.68f)
         c.save();c.clipRect(w*.07f,h*.19f,w*.93f,h*.79f)
         p.color=0xff265fe1.toInt();p.strokeWidth=w*.012f;p.style=Paint.Style.STROKE;p.strokeCap=Paint.Cap.ROUND;p.strokeJoin=Paint.Join.ROUND
         strokes.forEach { c.drawPath(it,p) };active?.let{c.drawPath(it,p)};p.style=Paint.Style.FILL;c.restore()
@@ -202,8 +203,20 @@ private class GameView(context: Context) : View(context) {
     }
     private fun ln(c:Canvas,x:Float,y:Float,a:Float,b:Float,col:Int,sw:Float) { p.color=col;p.strokeWidth=sw;p.strokeCap=Paint.Cap.ROUND;p.style=Paint.Style.STROKE;c.drawLine(x,y,a,b,p);p.style=Paint.Style.FILL }
     private fun circ(c:Canvas,x:Float,y:Float,r:Float,col:Int) { p.color=col;c.drawCircle(x,y,r,p) }
-    private fun scene(c:Canvas,k:Int,x:Float,y:Float,s:Float) {
+    private fun scene(c:Canvas,category:Int,k:Int,x:Float,y:Float,s:Float) {
         val d=0xff2f3b56.toInt();val blue=0xff5b9df5.toInt();val pink=0xffff759f.toInt();val yellow=0xffffc83e.toInt()
+        if(category==1 && k%10==1) {
+            circ(c,x,y,s*.22f,Color.WHITE)
+            val old=p.style
+            p.color=d;p.strokeWidth=s*.012f;p.style=Paint.Style.STROKE
+            c.drawCircle(x,y,s*.22f,p)
+            c.drawLine(x-s*.15f,y,x+s*.15f,y,p)
+            c.drawLine(x,y-s*.15f,x,y+s*.15f,p)
+            c.drawLine(x-s*.11f,y-s*.11f,x+s*.11f,y+s*.11f,p)
+            c.drawLine(x-s*.11f,y+s*.11f,x+s*.11f,y-s*.11f,p)
+            p.style=old
+            return
+        }
         when(k%10) {
             0->{circ(c,x,y,s*.22f,pink);circ(c,x-s*.06f,y-s*.04f,s*.025f,d);circ(c,x+s*.06f,y-s*.04f,s*.025f,d)}
             1->{circ(c,x,y,s*.19f,0xfff0b482.toInt());circ(c,x-s*.13f,y-s*.14f,s*.07f,0xfff0b482.toInt());circ(c,x+s*.13f,y-s*.14f,s*.07f,0xfff0b482.toInt());ln(c,x+s*.13f,y+s*.1f,x+s*.28f,y+s*.15f,0xfff0b482.toInt(),s*.035f)}
@@ -220,21 +233,22 @@ private class GameView(context: Context) : View(context) {
     private fun showToast(s:String) { toast=s;toastUntil=System.currentTimeMillis()+1700;invalidate() }
     private fun checkStroke(x:Float,y:Float) {
         val w=width.toFloat();val h=height.toFloat();val z=currentPuzzle()
-        val tx=w*z.tx;val ty=h*(.19f+z.ty*.60f)
         val bounds=RectF();active?.computeBounds(bounds,true)
-        val length=hypot((x-startX).toDouble(),(y-startY).toDouble()).toFloat()
-        // A tap no longer solves a level: require a real stroke with useful length and an endpoint near the missing part.
-        val radiusX=w*(.19f - (level/130f)*.09f)
-        val radiusY=h*(.16f - (level/130f)*.07f)
-        val nearTarget=abs(x-tx)<radiusX && abs(y-ty)<radiusY
-        if(length>w*.075f && nearTarget) {
+        // Ignore accidental taps and tiny touches: they are not failed drawing attempts.
+        if(strokeLength < w*.045f) return
+        // The drawing itself is centered in the illustration card. Check that a meaningful
+        // stroke was actually drawn in that area instead of checking the finger's endpoint
+        // against an unrelated point elsewhere on the screen.
+        val target = RectF(w*.25f,h*.31f,w*.75f,h*.64f)
+        val touchedTarget = bounds.intersect(target)
+        if(strokeLength > w*.075f && touchedTarget) {
             solvedThisRound=true
             coins+=if((level+1)%10==0) 50 else 10
             save()
             page=2
             if(sounds) (context as? MainActivity)?.celebrate()
         } else {
-            showToast("Jeszcze raz! Spróbuj dorysować element.")
+            showToast("Spróbuj narysować dłuższą kreskę na obrazku.")
             postDelayed({ if(page==1) { strokes.clear();invalidate() } }, 1000)
         }
     }
@@ -242,7 +256,7 @@ private class GameView(context: Context) : View(context) {
         val x=e.x;val y=e.y;val w=width.toFloat();val h=height.toFloat()
         when(e.action) {
             MotionEvent.ACTION_DOWN -> {
-                startX=x;startY=y;lastX=x;lastY=y
+                startX=x;startY=y;lastX=x;lastY=y;strokeLength=0f
                 if(page==0) {
                     if(y>h*.17f&&y<h*.245f&&x>w*.62f){page=3;invalidate();return true}
                     val i=((y/h-.28f)/.145f).toInt()
@@ -283,9 +297,9 @@ private class GameView(context: Context) : View(context) {
                     if(y>h*.63f&&y<h*.70f){sounds=!sounds;save();invalidate();return true}
                 }
             }
-            MotionEvent.ACTION_MOVE -> { active?.lineTo(x,y);lastX=x;lastY=y;invalidate() }
+            MotionEvent.ACTION_MOVE -> { active?.lineTo(x,y);strokeLength += hypot((x-lastX).toDouble(),(y-lastY).toDouble()).toFloat();lastX=x;lastY=y;invalidate() }
             MotionEvent.ACTION_UP -> {
-                active?.lineTo(x,y)
+                active?.lineTo(x,y);strokeLength += hypot((x-lastX).toDouble(),(y-lastY).toDouble()).toFloat()
                 if(page==1&&active!=null){checkStroke(x,y);active?.let{strokes.add(it)}}
                 active=null;invalidate()
             }
